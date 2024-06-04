@@ -1,6 +1,7 @@
 use std::fs::File;
-use std::io::{BufRead, BufReader, Error};
-use std::num::ParseIntError;
+use std::{env, io};
+use std::io::{BufRead, BufReader, Error, Write};
+use std::path::Path;
 
 pub trait ValueConverter {
     fn convert(&self, string: &str) -> Option<f32>;
@@ -78,56 +79,85 @@ impl ValueConverter for Fix16ToFloatConverter {
     }
 }
 
-struct ValueConverterFactory {
-    cur_factory: dyn ValueConverter,
-}
+struct ValueConverterFactory;
 
 impl ValueConverterFactory {
-    fn create(&mut self, name: &str) -> &dyn ValueConverter {
+    fn create(&self, name: &str) -> Option<&dyn ValueConverter> {
         match name {
-            "float32_to_float" => {
-                self.cur_factory = Fix32ToFloatConverter{
-                    bit: 0,
-                };
-                &self.cur_factory
+            "fix32_to_float" => {
+                Some(&Fix32ToFloatConverter {
+                    bit: 17,
+                })
             },
+            "fix16_to_float" => {
+                Some(&Fix16ToFloatConverter {
+                    bit: 9,
+                })
+            },
+            "float32_to_float" => {
+                Some(&Float32ToFloatConverter)
+            },
+            "float16_to_float" => {
+                Some(&Float16ToFloatConverter)
+            }
             &_ => {
-                &self.cur_factory
+                None
             }
         }
     }
 }
 
 fn main() -> Result<(), Error> {
-    let path = "/Users/wenhao/RustroverProjects/tools/src/lines.txt";
-    let input = File::open(path)?;
-    let buffered = BufReader::new(input);
-
-    process_file(buffered);
-    Ok(())
-}
-
-fn process_file(buffered: BufReader<File>) {
-    for line in buffered.lines() {
-        match line {
-            Ok(value) => {
-                let bits;
-                if value.starts_with("0x") {
-                    bits = u32::from_str_radix(&value[2..], 16);
+    let mut input = String::new();
+    let mut trimmed_input;
+    let buffer = io::stdin();
+    let mut factory = ValueConverterFactory;
+    let converter = factory.create("float32_to_float").unwrap();
+    loop {
+        input.clear();
+        buffer.read_line(&mut input).unwrap();
+        trimmed_input = input.trim();
+        let converter_tmp = factory.create(&trimmed_input);
+        match converter_tmp {
+            Some(converter) => {},
+            None => {
+                if trimmed_input == "exit" {
+                    return Ok(());
                 } else {
-                    bits = u32::from_str_radix(&value, 16);
-                }
-                match bits {
-                    Ok(bits) => {
-                        let float_val = f32::from_bits(bits);
-                        println!("{}", float_val);
-                    }
-                    Err(_e) => {
-                        println!("Fail to parse bit in line: {}", value);
-                    }
+                    process_file(&trimmed_input, converter);
                 }
             }
-            Err(e) => println!("{}", e),
+        }
+    }
+}
+
+fn process_file(path: &str, converter: &dyn ValueConverter) {
+    let path = Path::new(path);
+    let file = File::open(path);
+    match file {
+        Ok(file) => {
+            let buffered = BufReader::new(file);
+            let file_name = path.file_name().unwrap().to_str().unwrap();
+            let file_dir = path.parent().unwrap_or(".".as_ref());
+            let file_extension = path.extension().unwrap_or("".as_ref()).to_str().unwrap();
+            let mut file_out = File::create(Path::join(file_dir, format!("{}_out.{}", &file_name[..(file_name.len() - file_extension.len() - 1)], file_extension))).unwrap();
+            for line in buffered.lines() {
+                match line {
+                    Ok(line) => {
+                        let value;
+                        if line.starts_with("0x") {
+                            value = converter.convert(&line[2..]);
+                        } else {
+                            value = converter.convert(&line);
+                        }
+                        file_out.write_all(format!("{}\n", value.unwrap_or(f32::NAN)).as_bytes()).unwrap();
+                    }
+                    Err(e) => println!("{}", e),
+                }
+            }
+        },
+        Err(e) => {
+            println!("{}", e);
         }
     }
 }
