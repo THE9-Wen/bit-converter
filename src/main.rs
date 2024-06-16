@@ -1,25 +1,34 @@
-mod value_converter;
-
 use std::fs::File;
-use std::{env, io};
-use std::fmt::format;
 use std::io::{BufRead, BufReader, Error, stdin, Write};
-use std::num::{ParseFloatError, ParseIntError};
 use std::path::Path;
 use std::str::FromStr;
-use crate::value_converter::{ValueConverter, ValueConverterFactory};
+use crate::common_converter::ValueConverter;
+
+use crate::value_converter_factory::ValueConverterFactory;
+use crate::value_converter_factory::ValueType::{Float, Float32};
+
+mod value_converter_factory;
+mod float_converter;
+mod float32_converter;
+mod float16_converter;
+mod fix32_converter;
+mod fix16_converter;
+mod complex_converter;
+mod complex16_converter;
+mod fix_complex16_converter;
+mod common_converter;
 
 fn main() -> Result<(), Error> {
     let mut input = String::new();
     let mut trimmed_input;
     let buffer = stdin();
-    let mut factory = ValueConverterFactory;
-    let mut converter = factory.create("float32_to_float").unwrap();
+    let mut factory = ValueConverterFactory::new();
+    let mut converter = factory.create(Float32 as usize, Float as usize).unwrap();
     loop {
         input.clear();
         buffer.read_line(&mut input).unwrap();
         trimmed_input = input.trim();
-        let converter_tmp = factory.create(&trimmed_input);
+        let converter_tmp = factory.create(Float32 as usize, Float as usize);
         match converter_tmp {
             Some(converter_tmp) => {
                 converter = converter_tmp;
