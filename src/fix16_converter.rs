@@ -38,3 +38,31 @@ impl ValueConverter for Fix16ToFloat32Converter {
         todo!()
     }
 }
+
+pub struct Fix16ToFix16Converter {
+    pub(crate) bit_src: u32,
+    pub(crate) bit_dst: u32,
+}
+
+impl ValueConverter for Fix16ToFix16Converter {
+    fn convert(&self, string: &str) -> String {
+        let bits = i32::from_str_radix(string, 16);
+        match bits {
+            Ok(bits) => {
+                String::from(format!("0x{:08X}", bits >> (self.bit_src - self.bit_dst)))
+            }
+            Err(e) => {
+                println!("Error when parse line: {}", string);
+                String::from("NAN")
+            }
+        }
+    }
+
+    fn set_src_bit(&mut self, bit: u32) {
+        self.bit_src = bit
+    }
+
+    fn set_dst_bit(&mut self, bit: u32) {
+        self.bit_dst = bit
+    }
+}

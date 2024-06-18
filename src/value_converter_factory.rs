@@ -1,9 +1,10 @@
 use std::io::stdin;
+use std::str::FromStr;
 
 use crate::common_converter::{SelfConverter, ValueConverter};
 use crate::complex16_converter::Complex16ToComplexConverter;
 use crate::complex_converter::{ComplexToComplex16Converter, ComplexToFloat16Converter, ComplexToFloat32Converter, ComplexToFloatConverter};
-use crate::fix16_converter::{Fix16ToFloat16Converter, Fix16ToFloat32Converter, Fix16ToFloatConverter};
+use crate::fix16_converter::{Fix16ToFix16Converter, Fix16ToFloat16Converter, Fix16ToFloat32Converter, Fix16ToFloatConverter};
 use crate::fix32_converter::{Fix32ToComplex16Converter, Fix32ToComplexConverter, Fix32ToFloat16Converter, Fix32ToFloat32Converter, Fix32ToFloatConverter};
 use crate::float16_converter::{Float16ToFix16Converter, Float16ToFix32Converter, Float16ToFloat32Converter, Float16ToFloatConverter};
 use crate::float32_converter::{Float32ToComplexConverter, Float32ToFix16Converter, Float32ToFix32Converter, Float32ToFloat16Converter, Float32ToFloatConverter};
@@ -69,7 +70,7 @@ impl ValueConverterFactory {
         let fix16_to_float16: Box<dyn ValueConverter> = Box::new(Fix16ToFloat16Converter { bit: 0 });
         let fix16_to_float: Box<dyn ValueConverter> = Box::new(Fix16ToFloatConverter { bit: 0 });
         let fix16_to_fix32: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Fix16 as i32 });
-        let fix16_to_fix16: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Fix16 as i32 });
+        let fix16_to_fix16: Box<dyn ValueConverter> = Box::new(Fix16ToFix16Converter { bit_src: 0, bit_dst: 0 });
         let fix16_to_complex16: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Fix16 as i32 });
         let fix16_to_complex: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Fix16 as i32 });
 
@@ -103,15 +104,55 @@ impl ValueConverterFactory {
         }
     }
 
-    pub fn create(&self, src: usize, dst: usize) -> Option<&dyn ValueConverter>{
+    pub fn create(&mut self, string: &str) -> Option<&dyn ValueConverter>{
+        let mut split = string.split(' ');
+        let src = ValueType::get_value_type(split.next().unwrap_or("").trim());
+        let dst = ValueType::get_value_type(split.next().unwrap_or("").trim());
         if src >= ValueTypeNum as usize || dst >= ValueTypeNum as usize {
-            None
-        } else {
-            if self.converters[src][dst].is_self_converter() {
-                println!("self converter");
-            }
-            Some(self.converters[src][dst].as_ref())
+            return None
         }
+        let converter = self.converters[src][dst].as_mut();
+        if converter.is_self_converter() {
+            println!("Invalid converter, output value will remain the same as input value.");
+            return Some(converter)
+        }
+        let buffer = stdin();
+        let mut input = String::new();
+        if src >= Fix32 as usize {
+            loop {
+                println!("Please input src fraction bit width:");
+                buffer.read_line(&mut input).unwrap();
+                let bit = u32::from_str(&input.trim());
+                match bit {
+                    Ok(bit) => {
+                        if (src == Fix16 as usize && bit < 16) || (src == Fix32 as usize && bit < 32) {
+                            converter.set_src_bit(bit);
+                            break;
+                        }
+                    }
+                    Err(_) => {}
+                }
+                println!("Invalid input!");
+            }
+        }
+        if dst >= Fix32 as usize {
+            loop {
+                println!("Please input dst fraction bit width:");
+                buffer.read_line(&mut input).unwrap();
+                let bit = u32::from_str(&input.trim());
+                match bit {
+                    Ok(bit) => {
+                        if (src == Fix16 as usize && bit < 16) || (src == Fix32 as usize && bit < 32) {
+                            converter.set_dst_bit(bit);
+                            break;
+                        }
+                    }
+                    Err(_) => {}
+                }
+                println!("Invalid input!");
+            }
+        }
+        Some(converter)
     }
 }
 
@@ -119,16 +160,16 @@ pub enum ValueType {
     Float32 = 0,
     Float16,
     Float,
-    Fix32,
-    Fix16,
     Complex16,
     Complex,
+    Fix32,
+    Fix16,
     ValueTypeNum,
 }
 
 impl ValueType {
-    pub fn get_value_type(string: &str) -> Self {
-        match string {
+    pub fn get_value_type(string: &str) -> usize {
+        let value = match string {
             "float32" => Float32,
             "float16" => Float16,
             "float" => Float,
@@ -136,6 +177,7 @@ impl ValueType {
             "fix16" => Fix16,
             "complex" => Complex16,
             &_ => ValueTypeNum,
-        }
+        };
+        value as usize
     }
 }
