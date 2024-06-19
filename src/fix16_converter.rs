@@ -57,12 +57,4 @@ impl ValueConverter for Fix16ToFix16Converter {
             }
         }
     }
-
-    fn set_src_bit(&mut self, bit: u32) {
-        self.bit_src = bit
-    }
-
-    fn set_dst_bit(&mut self, bit: u32) {
-        self.bit_dst = bit
-    }
 }

@@ -11,10 +11,6 @@ use crate::float32_converter::{Float32ToComplexConverter, Float32ToFix16Converte
 use crate::float_converter::{FloatToComplex16Converter, FloatToComplexConverter, FloatToFix16Converter, FloatToFix32Converter, FloatToFloat16Converter, FloatToFloat32Converter};
 use crate::value_converter_factory::ValueType::{Complex, Complex16, Fix16, Fix32, Float, Float16, Float32, ValueTypeNum};
 
-pub struct ValueConverterFactory {
-    converters: Box<[[Box<dyn ValueConverter>; ValueTypeNum as usize]; 7]>,
-}
-
 fn read_integer_form_stdin() -> u32 {
     println!("Please enter the bit width of the fractional part of the fixed-point:");
     let buffer = stdin();
@@ -31,129 +27,91 @@ fn read_integer_form_stdin() -> u32 {
     }
 }
 
+pub trait ValueConverterFactory {
+    fn create(dst: ValueType) -> Box<dyn ValueConverter>;
+}
 
-impl ValueConverterFactory {
-    pub fn new() -> Self {
-        let float32_to_float32: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Float32 as i32 });
-        let float32_to_float16: Box<dyn ValueConverter> = Box::new(Float32ToFloat16Converter);
-        let float32_to_float: Box<dyn ValueConverter> = Box::new(Float32ToFloatConverter);
-        let float32_to_fix32: Box<dyn ValueConverter> = Box::new(Float32ToFix32Converter { bit: 0 });
-        let float32_to_fix16: Box<dyn ValueConverter> = Box::new(Float32ToFix16Converter { bit: 0 });
-        let float32_to_complex16: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Float32 as i32 });
-        let float32_to_complex: Box<dyn ValueConverter> = Box::new(Float32ToComplexConverter);
+pub struct FloatConverterFactory;
 
-        let float16_to_float32: Box<dyn ValueConverter> = Box::new(Float16ToFloat32Converter);
-        let float16_to_float16: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Float16 as i32 });
-        let float16_to_float: Box<dyn ValueConverter> = Box::new(Float16ToFloatConverter);
-        let float16_to_fix32: Box<dyn ValueConverter> = Box::new(Float16ToFix32Converter { bit: 0 });
-        let float16_to_fix16: Box<dyn ValueConverter> = Box::new(Float16ToFix16Converter { bit: 0 });
-        let float16_to_complex16: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Float16 as i32 });
-        let float16_to_complex: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Float16 as i32 });
-
-        let float_to_float32: Box<dyn ValueConverter> = Box::new(FloatToFloat32Converter);
-        let float_to_float16: Box<dyn ValueConverter> = Box::new(FloatToFloat16Converter);
-        let float_to_float: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Float as i32 });
-        let float_to_fix32: Box<dyn ValueConverter> = Box::new(FloatToFix32Converter { bit: 0 });
-        let float_to_fix16: Box<dyn ValueConverter> = Box::new(FloatToFix16Converter { bit: 0 });
-        let float_to_complex16: Box<dyn ValueConverter> = Box::new(FloatToComplex16Converter);
-        let float_to_complex: Box<dyn ValueConverter> = Box::new(FloatToComplexConverter);
-
-        let fix32_to_float32: Box<dyn ValueConverter> = Box::new(Fix32ToFloat32Converter { bit: 0 });
-        let fix32_to_float16: Box<dyn ValueConverter> = Box::new(Fix32ToFloat16Converter { bit: 0 });
-        let fix32_to_float: Box<dyn ValueConverter> = Box::new(Fix32ToFloatConverter { bit: 0 });
-        let fix32_to_fix32: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Fix32 as i32 });
-        let fix32_to_fix16: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Fix32 as i32 });
-        let fix32_to_complex16: Box<dyn ValueConverter> = Box::new(Fix32ToComplex16Converter { bit: 0 });
-        let fix32_to_complex: Box<dyn ValueConverter> = Box::new(Fix32ToComplexConverter { bit: 0 });
-
-        let fix16_to_float32: Box<dyn ValueConverter> = Box::new(Fix16ToFloat32Converter { bit: 0 });
-        let fix16_to_float16: Box<dyn ValueConverter> = Box::new(Fix16ToFloat16Converter { bit: 0 });
-        let fix16_to_float: Box<dyn ValueConverter> = Box::new(Fix16ToFloatConverter { bit: 0 });
-        let fix16_to_fix32: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Fix16 as i32 });
-        let fix16_to_fix16: Box<dyn ValueConverter> = Box::new(Fix16ToFix16Converter { bit_src: 0, bit_dst: 0 });
-        let fix16_to_complex16: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Fix16 as i32 });
-        let fix16_to_complex: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Fix16 as i32 });
-
-        let complex_to_float32: Box<dyn ValueConverter> = Box::new(ComplexToFloat32Converter);
-        let complex_to_float16: Box<dyn ValueConverter> = Box::new(ComplexToFloat16Converter);
-        let complex_to_float: Box<dyn ValueConverter> = Box::new(ComplexToFloatConverter);
-        let complex_to_fix32: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Complex as i32});
-        let complex_to_fix16: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Complex as i32});
-        let complex_to_complex16: Box<dyn ValueConverter> = Box::new(ComplexToComplex16Converter);
-        let complex_to_complex: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Complex as i32});
-
-        let complex16_to_float32: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Complex16 as i32 });
-        let complex16_to_float16: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Complex16 as i32 });
-        let complex16_to_float: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Complex16 as i32 });
-        let complex16_to_fix32: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Complex16 as i32 });
-        let complex16_to_fix16: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Complex16 as i32 });
-        let complex16_to_complex16: Box<dyn ValueConverter> = Box::new(SelfConverter { value_type: Complex16 as i32 });
-        let complex16_to_complex: Box<dyn ValueConverter> = Box::new(Complex16ToComplexConverter);
-
-        let mut value_converters = Box::new([
-            [float32_to_float32, float32_to_float16, float32_to_float, float32_to_fix32, float32_to_fix16, float32_to_complex16, float32_to_complex],
-            [float16_to_float32, float16_to_float16, float16_to_float, float16_to_fix32, float16_to_fix16, float16_to_complex16, float16_to_complex],
-            [float_to_float32, float_to_float16, float_to_float, float_to_fix32, float_to_fix16, float_to_complex16, float_to_complex],
-            [fix32_to_float32, fix32_to_float16, fix32_to_float, fix32_to_fix32, fix32_to_fix16, fix32_to_complex16, fix32_to_complex],
-            [fix16_to_float32, fix16_to_float16, fix16_to_float, fix16_to_fix32, fix16_to_fix16, fix16_to_complex16, fix16_to_complex],
-            [complex_to_float32, complex_to_float16, complex_to_float, complex_to_fix32, complex_to_fix16, complex_to_complex16, complex_to_complex],
-            [complex16_to_float32, complex16_to_float16, complex16_to_float, complex16_to_fix32, complex16_to_fix16, complex16_to_complex16, complex16_to_complex],
-        ]);
-        Self {
-            converters: value_converters,
+impl ValueConverterFactory for FloatConverterFactory {
+    fn create(dst: ValueType) -> Box<dyn ValueConverter> {
+        match dst {
+            Float32 => Box::new(FloatToFloat32Converter),
+            Float16 => Box::new(FloatToFloat16Converter),
+            Complex16 => Box::new(FloatToFix32Converter { bit: 0 }),
+            Complex => Box::new(FloatToFix16Converter { bit: 0 }),
+            Fix32 => create_fix_converter(|bit| FloatToFix32Converter { bit }),
+            Fix16 => create_fix_converter(|bit| FloatToFix16Converter { bit }),
+            _ => Box::new(SelfConverter { value_type: Float as i32 }),
         }
     }
+}
 
-    pub fn create(&mut self, string: &str) -> Option<&dyn ValueConverter>{
-        let mut split = string.split(' ');
-        let src = ValueType::get_value_type(split.next().unwrap_or("").trim());
-        let dst = ValueType::get_value_type(split.next().unwrap_or("").trim());
-        if src >= ValueTypeNum as usize || dst >= ValueTypeNum as usize {
-            return None
+pub struct Float32ConverterFactory;
+
+impl ValueConverterFactory for Float32ConverterFactory {
+    fn create(dst: ValueType) -> Box<dyn ValueConverter> {
+        match dst {
+            Float16 => Box::new(Float32ToFloat16Converter),
+            Float => Box::new(Float32ToFloatConverter),
+            Complex => Box::new(Float32ToComplexConverter),
+            Fix32 => create_fix_converter(|bit| Float32ToFix32Converter { bit }),
+            Fix16 => create_fix_converter(|bit| Float32ToFix16Converter { bit }),
+            _ => Box::new(SelfConverter { value_type: Float32 as i32 })
         }
-        let converter = self.converters[src][dst].as_mut();
-        if converter.is_self_converter() {
-            println!("Invalid converter, output value will remain the same as input value.");
-            return Some(converter)
-        }
-        let buffer = stdin();
-        let mut input = String::new();
-        if src >= Fix32 as usize {
-            loop {
-                println!("Please input src fraction bit width:");
-                buffer.read_line(&mut input).unwrap();
-                let bit = u32::from_str(&input.trim());
-                match bit {
-                    Ok(bit) => {
-                        if (src == Fix16 as usize && bit < 16) || (src == Fix32 as usize && bit < 32) {
-                            converter.set_src_bit(bit);
-                            break;
-                        }
-                    }
-                    Err(_) => {}
-                }
-                println!("Invalid input!");
-            }
-        }
-        if dst >= Fix32 as usize {
-            loop {
-                println!("Please input dst fraction bit width:");
-                buffer.read_line(&mut input).unwrap();
-                let bit = u32::from_str(&input.trim());
-                match bit {
-                    Ok(bit) => {
-                        if (src == Fix16 as usize && bit < 16) || (src == Fix32 as usize && bit < 32) {
-                            converter.set_dst_bit(bit);
-                            break;
-                        }
-                    }
-                    Err(_) => {}
-                }
-                println!("Invalid input!");
-            }
-        }
-        Some(converter)
     }
+}
+
+pub struct Float16ConverterFactory;
+
+impl ValueConverterFactory for Float16ConverterFactory {
+    fn create(dst: ValueType) -> Box<dyn ValueConverter> {
+        match dst {
+            Float32 => Box::new(Float16ToFloat32Converter),
+            Float => Box::new(Float16ToFloatConverter),
+            Fix32 => create_fix_converter(|bit|Float16ToFix32Converter { bit }),
+            Fix16 => create_fix_converter(|bit|Float16ToFix16Converter { bit }),
+            _ => Box::new(SelfConverter { value_type: Float16 as i32 })
+        }
+    }
+}
+
+pub struct Fix32ConverterFactory;
+
+impl ValueConverterFactory for Fix32ConverterFactory {
+    fn create(dst: ValueType) -> Box<dyn ValueConverter> {
+        match dst {
+            // Float32 => {}
+            // Float16 => {}
+            // Float => Box::new()
+            // Complex16 => {}
+            // Complex => {}
+            // Fix16 => {}
+            _ => Box::new(SelfConverter { value_type: Fix32 as i32 })
+        }
+    }
+}
+
+fn create_fix_converter<F>(f: F) -> Box<dyn ValueConverter> where
+    F: FnOnce() -> dyn ValueConverter
+{
+    let buffer = stdin();
+    let mut input = String::new();
+    let converter;
+    loop {
+        println!("Please input dst fraction bit width:");
+        buffer.read_line(&mut input).unwrap();
+        let bit = u32::from_str(&input.trim());
+        match bit {
+            Ok(bit) => {
+                converter = Box::new(f(bit));
+                break;
+            }
+            Err(_) => {}
+        }
+        println!("Invalid input!");
+    }
+    converter
 }
 
 pub enum ValueType {

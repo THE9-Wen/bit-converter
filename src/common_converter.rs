@@ -1,13 +1,8 @@
+use crate::value_converter_factory::ValueType;
 use crate::value_converter_factory::ValueType::{Complex, Float};
 
 pub trait ValueConverter {
     fn convert(&self, string: &str) -> String;
-
-    fn set_bit(&self, bit: u32) {}
-
-    fn set_src_bit(&mut self, bit: u32) {}
-
-    fn set_dst_bit(&mut self, bit: u32) {}
 
     fn is_self_converter(&self) -> bool {
         false
