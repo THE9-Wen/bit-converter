@@ -5,7 +5,7 @@ use std::str::FromStr;
 use regex::Regex;
 use crate::common_converter::ValueConverter;
 
-use crate::value_converter_factory::ValueConverterFactory;
+use crate::value_converter_factory::{Complex16ConverterFactory, ComplexConverterFactory, ConverterFactory, Fix16ConverterFactory, Fix32ConverterFactory, Float16ConverterFactory, Float32ConverterFactory, FloatConverterFactory, ValueConverterFactory, ValueType};
 use crate::value_converter_factory::ValueType::{Float, Float32};
 
 mod value_converter_factory;
@@ -37,30 +37,27 @@ Input \"quit\" to quit
     let mut input = String::new();
     let mut trimmed_input;
     let buffer = stdin();
-    let mut factory = ValueConverterFactory::new();
-    let mut converter = factory.create("float32 float").unwrap();
+    let mut converter = ConverterFactory::create(Float, Float32);
     let bit_stream = Regex::new(r"^(0x)?[0-9A-Fa-f]{1,8}$").unwrap();
     let number = Regex::new(r"^[+-]?(\d+(\.\d*)?|\.\d+)$").unwrap();
     loop {
         input.clear();
         buffer.read_line(&mut input).unwrap();
         trimmed_input = input.trim();
-        let converter_tmp = factory.create(trimmed_input);
-        match converter_tmp {
-            Some(converter_tmp) => {
-                converter = converter_tmp;
-            }
-            None => {
-                if trimmed_input == "quit" {
-                    return Ok(());
-                } else if bit_stream.is_match(trimmed_input) {
-                    println!("{}", converter.convert(&trimmed_input[2..]));
-                } else if number.is_match(trimmed_input) {
-                    println!("{}", converter.convert(trimmed_input));
-                } else {
-                    process_file(&trimmed_input, &*converter);
-                }
-            }
+        let split: Vec<&str> = trimmed_input.split(" ").collect();
+        if split.len() == 2 {
+            converter = ConverterFactory::create(
+                ValueType::get_value_type(split[0]),
+                ValueType::get_value_type(split[1]));
+        }
+        if trimmed_input == "quit" {
+            return Ok(());
+        } else if bit_stream.is_match(trimmed_input) {
+            println!("{}", converter.convert(&trimmed_input[2..]));
+        } else if number.is_match(trimmed_input) {
+            println!("{}", converter.convert(trimmed_input));
+        } else {
+            process_file(&trimmed_input, &*converter);
         }
     }
 }

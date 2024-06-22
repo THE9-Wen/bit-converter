@@ -2,10 +2,6 @@ use std::io::stdin;
 use std::str::FromStr;
 
 use crate::common_converter::{SelfConverter, ValueConverter};
-use crate::complex16_converter::Complex16ToComplexConverter;
-use crate::complex_converter::{ComplexToComplex16Converter, ComplexToFloat16Converter, ComplexToFloat32Converter, ComplexToFloatConverter};
-use crate::fix16_converter::{Fix16ToFix16Converter, Fix16ToFloat16Converter, Fix16ToFloat32Converter, Fix16ToFloatConverter};
-use crate::fix32_converter::{Fix32ToComplex16Converter, Fix32ToComplexConverter, Fix32ToFloat16Converter, Fix32ToFloat32Converter, Fix32ToFloatConverter};
 use crate::float16_converter::{Float16ToFix16Converter, Float16ToFix32Converter, Float16ToFloat32Converter, Float16ToFloatConverter};
 use crate::float32_converter::{Float32ToComplexConverter, Float32ToFix16Converter, Float32ToFix32Converter, Float32ToFloat16Converter, Float32ToFloatConverter};
 use crate::float_converter::{FloatToComplex16Converter, FloatToComplexConverter, FloatToFix16Converter, FloatToFix32Converter, FloatToFloat16Converter, FloatToFloat32Converter};
@@ -40,8 +36,8 @@ impl ValueConverterFactory for FloatConverterFactory {
             Float16 => Box::new(FloatToFloat16Converter),
             Complex16 => Box::new(FloatToFix32Converter { bit: 0 }),
             Complex => Box::new(FloatToFix16Converter { bit: 0 }),
-            Fix32 => create_fix_converter(|bit| FloatToFix32Converter { bit }),
-            Fix16 => create_fix_converter(|bit| FloatToFix16Converter { bit }),
+            Fix32 => create_fix_converter(|bit| Box::new(FloatToFix32Converter { bit })),
+            Fix16 => create_fix_converter(|bit| Box::new(FloatToFix16Converter { bit })),
             _ => Box::new(SelfConverter { value_type: Float as i32 }),
         }
     }
@@ -55,8 +51,8 @@ impl ValueConverterFactory for Float32ConverterFactory {
             Float16 => Box::new(Float32ToFloat16Converter),
             Float => Box::new(Float32ToFloatConverter),
             Complex => Box::new(Float32ToComplexConverter),
-            Fix32 => create_fix_converter(|bit| Float32ToFix32Converter { bit }),
-            Fix16 => create_fix_converter(|bit| Float32ToFix16Converter { bit }),
+            Fix32 => create_fix_converter(|bit| Box::new(Float32ToFix32Converter { bit })),
+            Fix16 => create_fix_converter(|bit| Box::new(Float32ToFix16Converter { bit })),
             _ => Box::new(SelfConverter { value_type: Float32 as i32 })
         }
     }
@@ -69,8 +65,8 @@ impl ValueConverterFactory for Float16ConverterFactory {
         match dst {
             Float32 => Box::new(Float16ToFloat32Converter),
             Float => Box::new(Float16ToFloatConverter),
-            Fix32 => create_fix_converter(|bit|Float16ToFix32Converter { bit }),
-            Fix16 => create_fix_converter(|bit|Float16ToFix16Converter { bit }),
+            Fix32 => create_fix_converter(|bit| Box::new(Float16ToFix32Converter { bit })),
+            Fix16 => create_fix_converter(|bit| Box::new(Float16ToFix16Converter { bit })),
             _ => Box::new(SelfConverter { value_type: Float16 as i32 })
         }
     }
@@ -92,8 +88,49 @@ impl ValueConverterFactory for Fix32ConverterFactory {
     }
 }
 
+pub struct Fix16ConverterFactory;
+
+impl ValueConverterFactory for Fix16ConverterFactory {
+    fn create(dst: ValueType) -> Box<dyn ValueConverter> {
+        todo!()
+    }
+}
+
+pub struct Complex16ConverterFactory;
+
+impl ValueConverterFactory for Complex16ConverterFactory {
+    fn create(dst: ValueType) -> Box<dyn ValueConverter> {
+        todo!()
+    }
+}
+
+pub struct ComplexConverterFactory;
+
+impl ValueConverterFactory for ComplexConverterFactory {
+    fn create(dst: ValueType) -> Box<dyn ValueConverter> {
+        todo!()
+    }
+}
+
+pub struct ConverterFactory;
+
+impl ConverterFactory {
+    pub(crate) fn create(src: ValueType, dst: ValueType) -> Box<dyn ValueConverter> {
+        match src {
+            Float32 => Float32ConverterFactory::create(dst),
+            Float16 => Float16ConverterFactory::create(dst),
+            Float => FloatConverterFactory::create(dst),
+            Complex16 => Complex16ConverterFactory::create(dst),
+            Complex => ComplexConverterFactory::create(dst),
+            Fix32 => Fix32ConverterFactory::create(dst),
+            Fix16 => Fix16ConverterFactory::create(dst),
+            ValueTypeNum => Box::new(SelfConverter { value_type : src as i32 }),
+        }
+    }
+}
+
 fn create_fix_converter<F>(f: F) -> Box<dyn ValueConverter> where
-    F: FnOnce() -> dyn ValueConverter
+    F: FnOnce(u32) -> Box<dyn ValueConverter>
 {
     let buffer = stdin();
     let mut input = String::new();
@@ -104,7 +141,7 @@ fn create_fix_converter<F>(f: F) -> Box<dyn ValueConverter> where
         let bit = u32::from_str(&input.trim());
         match bit {
             Ok(bit) => {
-                converter = Box::new(f(bit));
+                converter = f(bit);
                 break;
             }
             Err(_) => {}
@@ -126,16 +163,19 @@ pub enum ValueType {
 }
 
 impl ValueType {
-    pub fn get_value_type(string: &str) -> usize {
-        let value = match string {
+    pub fn get_value_type(string: &str) -> ValueType {
+        match string {
             "float32" => Float32,
             "float16" => Float16,
             "float" => Float,
             "fix32" => Fix32,
             "fix16" => Fix16,
-            "complex" => Complex16,
-            &_ => ValueTypeNum,
-        };
-        value as usize
+            "complex16" => Complex16,
+            "complex"=> Complex,
+            &_ => {
+                println!("Invalid value type: {}", string);
+                ValueTypeNum
+            },
+        }
     }
 }
