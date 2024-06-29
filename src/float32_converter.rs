@@ -1,4 +1,6 @@
 use crate::common_converter::ValueConverter;
+use crate::fix16_converter::Fix16ToFloatConverter;
+use crate::float16_converter::Float16ToFloatConverter;
 
 pub struct Float32ToFloatConverter;
 
@@ -24,17 +26,22 @@ impl ValueConverter for Float32ToFloat16Converter {
         let bits = u32::from_str_radix(string, 16);
         match bits {
             Ok(bits) => {
-                let sign_bit = (bits >> 31) & 0x1;
-                let exponent_bits = (bits >> 23) & 0x1f;
-                let fraction_bits = bits & 0x7fffff;
-                let num_16bit = (sign_bit << 15) | (exponent_bits << 10) | fraction_bits;
-                String::from(format!("0x{:04X}", num_16bit))
+                String::from(format!("0x{:04X}", Self::float32_to_float16(bits)))
             }
             Err(_) => {
                 println!("Error when parse line: {}", string);
                 String::from("NAN")
             }
         }
+    }
+}
+
+impl Float32ToFloat16Converter {
+    pub fn float32_to_float16(bits: u32) -> u16 {
+        let sign_bit = (bits >> 31) & 0x1;
+        let exponent_bits = (bits >> 23) & 0x1f;
+        let fraction_bits = bits & 0x7fffff;
+        ((sign_bit << 15) | (exponent_bits << 10) | fraction_bits) as u16
     }
 }
 
@@ -108,6 +115,17 @@ pub struct Float32ToComplexConverter;
 
 impl ValueConverter for Float32ToComplexConverter {
     fn convert(&self, string: &str) -> String {
-        todo!()
+        let bits = u32::from_str_radix(string, 16);
+        match bits {
+            Ok(bits) => {
+                let img = (bits & 0xffff) as u16;
+                let real = (bits >> 16) as u16;
+                String::from(format!("{} + {}i", Float16ToFloatConverter::float16_to_float(real), Float16ToFloatConverter::float16_to_float(img)))
+            }
+            Err(_) => {
+                println!("Error when parse line: {}", string);
+                String::from("NAN")
+            }
+        }
     }
 }
