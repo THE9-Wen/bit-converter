@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use std::io::stdin;
 use std::str::FromStr;
 
@@ -25,13 +26,13 @@ fn read_integer_form_stdin() -> u32 {
 }
 
 pub trait ValueConverterFactory {
-    fn create(dst: ValueType) -> Box<dyn ValueConverter>;
+    fn create(dst: &ValueType) -> Box<dyn ValueConverter>;
 }
 
 pub struct FloatConverterFactory;
 
 impl ValueConverterFactory for FloatConverterFactory {
-    fn create(dst: ValueType) -> Box<dyn ValueConverter> {
+    fn create(dst: &ValueType) -> Box<dyn ValueConverter> {
         match dst {
             Float32 => Box::new(FloatToFloat32Converter),
             Float16 => Box::new(FloatToFloat16Converter),
@@ -47,7 +48,7 @@ impl ValueConverterFactory for FloatConverterFactory {
 pub struct Float32ConverterFactory;
 
 impl ValueConverterFactory for Float32ConverterFactory {
-    fn create(dst: ValueType) -> Box<dyn ValueConverter> {
+    fn create(dst: &ValueType) -> Box<dyn ValueConverter> {
         match dst {
             Float16 => Box::new(Float32ToFloat16Converter),
             Float => Box::new(Float32ToFloatConverter),
@@ -62,7 +63,7 @@ impl ValueConverterFactory for Float32ConverterFactory {
 pub struct Float16ConverterFactory;
 
 impl ValueConverterFactory for Float16ConverterFactory {
-    fn create(dst: ValueType) -> Box<dyn ValueConverter> {
+    fn create(dst: &ValueType) -> Box<dyn ValueConverter> {
         match dst {
             Float32 => Box::new(Float16ToFloat32Converter),
             Float => Box::new(Float16ToFloatConverter),
@@ -76,7 +77,7 @@ impl ValueConverterFactory for Float16ConverterFactory {
 pub struct Fix32ConverterFactory;
 
 impl ValueConverterFactory for Fix32ConverterFactory {
-    fn create(dst: ValueType) -> Box<dyn ValueConverter> {
+    fn create(dst: &ValueType) -> Box<dyn ValueConverter> {
         match dst {
             // Float32 => {}
             // Float16 => {}
@@ -92,7 +93,7 @@ impl ValueConverterFactory for Fix32ConverterFactory {
 pub struct Fix16ConverterFactory;
 
 impl ValueConverterFactory for Fix16ConverterFactory {
-    fn create(dst: ValueType) -> Box<dyn ValueConverter> {
+    fn create(dst: &ValueType) -> Box<dyn ValueConverter> {
         match dst {
             Float16 => create_fix_converter(|bit| Box::new(Fix16ToFloat16Converter { bit })),
             Float => create_fix_converter(|bit| Box::new(Fix16ToFloatConverter { bit })),
@@ -104,7 +105,7 @@ impl ValueConverterFactory for Fix16ConverterFactory {
 pub struct Complex16ConverterFactory;
 
 impl ValueConverterFactory for Complex16ConverterFactory {
-    fn create(dst: ValueType) -> Box<dyn ValueConverter> {
+    fn create(dst: &ValueType) -> Box<dyn ValueConverter> {
         todo!()
     }
 }
@@ -112,7 +113,7 @@ impl ValueConverterFactory for Complex16ConverterFactory {
 pub struct ComplexConverterFactory;
 
 impl ValueConverterFactory for ComplexConverterFactory {
-    fn create(dst: ValueType) -> Box<dyn ValueConverter> {
+    fn create(dst: &ValueType) -> Box<dyn ValueConverter> {
         todo!()
     }
 }
@@ -120,7 +121,7 @@ impl ValueConverterFactory for ComplexConverterFactory {
 pub struct ConverterFactory;
 
 impl ConverterFactory {
-    pub(crate) fn create(src: ValueType, dst: ValueType) -> Box<dyn ValueConverter> {
+    pub(crate) fn create(src: &ValueType, dst: &ValueType) -> Box<dyn ValueConverter> {
         match src {
             Float32 => Float32ConverterFactory::create(dst),
             Float16 => Float16ConverterFactory::create(dst),
@@ -129,7 +130,7 @@ impl ConverterFactory {
             Complex => ComplexConverterFactory::create(dst),
             Fix32 => Fix32ConverterFactory::create(dst),
             Fix16 => Fix16ConverterFactory::create(dst),
-            ValueTypeNum => Box::new(SelfConverter { value_type : src as i32 }),
+            ValueTypeNum => Box::new(SelfConverter { value_type : 0 }),
         }
     }
 }
@@ -156,6 +157,7 @@ fn create_fix_converter<F>(f: F) -> Box<dyn ValueConverter> where
     converter
 }
 
+#[derive(Clone, Copy, PartialEq)]
 pub enum ValueType {
     Float32 = 0,
     Float16,
@@ -165,6 +167,21 @@ pub enum ValueType {
     Fix32,
     Fix16,
     ValueTypeNum,
+}
+
+impl Display for ValueType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Float32 => write!(f, "{}", "float32"),
+            Float16 => write!(f, "{}", "float16"),
+            Float => write!(f, "{}", "float"),
+            Complex16 => write!(f, "{}", "complex16"),
+            Complex => write!(f, "{}", "complex"),
+            Fix32 => write!(f, "{}", "fix32"),
+            Fix16 => write!(f, "{}", "fix16"),
+            ValueTypeNum => write!(f, "{}", "value_type_num"),
+        }
+    }
 }
 
 impl ValueType {
