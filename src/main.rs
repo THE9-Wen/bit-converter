@@ -85,8 +85,10 @@ impl BitConverter {
 
     fn grid_contents(&mut self, ui: &mut Ui) {
         let mut switch_converter = false;
-        let src = Float;
-        let dst = Float32;
+        let src = self.src;
+        let dst = self.dst;
+        let src_bit = self.src_bit;
+        let dst_bit = self.dst_bit;
 
         ui.label("Input Data Type:");
         ui.horizontal(|ui| {
@@ -99,6 +101,11 @@ impl BitConverter {
                             .changed();
                     }
                 });
+            if self.src == dst {
+                self.dst = src;
+                self.src_bit = dst_bit;
+                self.dst_bit = src_bit;
+            }
             match self.src {
                 Fix32 => self.select_src_bit(&mut switch_converter, ui,32),
                 Fix16 => self.select_src_bit(&mut switch_converter, ui,16),
