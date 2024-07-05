@@ -50,6 +50,8 @@ struct BitConverter {
     dst_file: String,
     src_value: String,
     dst_value: String,
+    src_bit: usize,
+    dst_bit: usize,
     src: ValueType,
     dst: ValueType,
 }
@@ -62,6 +64,8 @@ impl BitConverter {
             dst_file: "".to_string(),
             src_value: "".to_string(),
             dst_value: "".to_string(),
+            src_bit: 0,
+            dst_bit: 0,
             src: Float,
             dst: Float32,
         }
@@ -83,28 +87,42 @@ impl BitConverter {
         let src = Float;
         let dst = Float32;
 
-        let label = ui.label("Input Data Type:");
-        egui::ComboBox::new("input_data_type", "")
-            .selected_text(format!("{}", self.src))
-            .show_ui(ui, |ui| {
-                for kind in [Float, Float32, Float16, Fix32, Fix16, Complex, Complex16] {
-                    switch_converter |= ui
-                        .selectable_value(&mut self.src, kind, format!("{}", kind))
-                        .changed();
-                }
-            });
+        ui.label("Input Data Type:");
+        ui.horizontal(|ui| {
+            egui::ComboBox::new("input_data_type", "")
+                .selected_text(format!("{}", self.src))
+                .show_ui(ui, |ui| {
+                    for kind in [Float, Float32, Float16, Fix32, Fix16, Complex, Complex16] {
+                        switch_converter |= ui
+                            .selectable_value(&mut self.src, kind, format!("{}", kind))
+                            .changed();
+                    }
+                });
+            match self.src {
+                Fix32 => self.select_src_bit(&mut switch_converter, ui,32),
+                Fix16 => self.select_src_bit(&mut switch_converter, ui,16),
+                _ => {}
+            }
+        });
         ui.end_row();
 
-        let label = ui.label("Output Data Type:");
-        egui::ComboBox::new("output_data_type", "")
-            .selected_text(format!("{}", self.dst))
-            .show_ui(ui, |ui| {
-                for kind in [Float, Float32, Float16, Fix32, Fix16, Complex, Complex16] {
-                    switch_converter |= ui
-                        .selectable_value(&mut self.dst, kind, format!("{}", kind))
-                        .changed();
-                }
-            });
+        ui.label("Output Data Type:");
+        ui.horizontal(|ui| {
+            egui::ComboBox::new("output_data_type", "")
+                .selected_text(format!("{}", self.dst))
+                .show_ui(ui, |ui| {
+                    for kind in [Float, Float32, Float16, Fix32, Fix16, Complex, Complex16] {
+                        switch_converter |= ui
+                            .selectable_value(&mut self.dst, kind, format!("{}", kind))
+                            .changed();
+                    }
+                });
+            match self.dst {
+                Fix32 => self.select_src_bit(&mut switch_converter, ui,32),
+                Fix16 => self.select_src_bit(&mut switch_converter, ui,16),
+                _ => {}
+            }
+        });
         ui.end_row();
 
         if switch_converter && self.switch_converter() {
@@ -115,14 +133,14 @@ impl BitConverter {
         ui.label("Convert File:");
         ui.end_row();
 
-        let label = ui.label("Input File Path:");
+        ui.label("Input File Path:");
         ui.text_edit_singleline(&mut self.src_file);
         if ui.button("Browse").clicked() {
             println!("Hello");
         }
         ui.end_row();
 
-        let label = ui.label("Output File Path:");
+        ui.label("Output File Path:");
         ui.text_edit_singleline(&mut self.dst_file);
         ui.end_row();
 
@@ -134,11 +152,11 @@ impl BitConverter {
         ui.label("Convert Value:");
         ui.end_row();
 
-        let label = ui.label("Input Value:");
+        ui.label("Input Value:");
         ui.text_edit_singleline(&mut self.src_value);
         ui.end_row();
 
-        let label = ui.label("Output Value:");
+        ui.label("Output Value:");
         ui.text_edit_singleline(&mut self.dst_value);
         ui.end_row();
 
@@ -146,6 +164,30 @@ impl BitConverter {
             self.dst_value = self.converter.convert(self.src_value.as_ref());
         }
         ui.end_row();
+    }
+
+    fn select_src_bit(&mut self, switch_converter: &mut bool, ui: &mut Ui, range: usize) {
+        egui::ComboBox::new("src_bit", "")
+            .selected_text(format!("{}", self.src_bit))
+            .show_ui(ui, |ui| {
+                for kind in 0..range {
+                    *switch_converter |= ui
+                        .selectable_value(&mut self.src_bit, kind, format!("{}", kind))
+                        .changed();
+                }
+            });
+    }
+
+    fn select_dst_bit(&mut self, switch_converter: &mut bool, ui: &mut Ui, range: usize) {
+        egui::ComboBox::new("dst_bit", "")
+            .selected_text(format!("{}", self.dst_bit))
+            .show_ui(ui, |ui| {
+                for kind in 0..range {
+                    *switch_converter |= ui
+                        .selectable_value(&mut self.dst_bit, kind, format!("{}", kind))
+                        .changed();
+                }
+            });
     }
 }
 
