@@ -50,8 +50,8 @@ struct BitConverter {
     dst_file: String,
     src_value: String,
     dst_value: String,
-    src_bit: usize,
-    dst_bit: usize,
+    src_bit: u32,
+    dst_bit: u32,
     src: ValueType,
     dst: ValueType,
 }
@@ -72,7 +72,7 @@ impl BitConverter {
     }
 
     fn switch_converter(&mut self) -> bool {
-        let converter = ConverterFactory::create(&self.src, &self.dst);
+        let converter = ConverterFactory::create(&self.src, &self.dst, self.src_bit, self.dst_bit);
         if converter.is_self_converter() {
             true
         } else {
@@ -166,7 +166,7 @@ impl BitConverter {
         ui.end_row();
     }
 
-    fn select_src_bit(&mut self, switch_converter: &mut bool, ui: &mut Ui, range: usize) {
+    fn select_src_bit(&mut self, switch_converter: &mut bool, ui: &mut Ui, range: u32) {
         egui::ComboBox::new("src_bit", "")
             .selected_text(format!("{}", self.src_bit))
             .show_ui(ui, |ui| {
@@ -178,7 +178,7 @@ impl BitConverter {
             });
     }
 
-    fn select_dst_bit(&mut self, switch_converter: &mut bool, ui: &mut Ui, range: usize) {
+    fn select_dst_bit(&mut self, switch_converter: &mut bool, ui: &mut Ui, range: u32) {
         egui::ComboBox::new("dst_bit", "")
             .selected_text(format!("{}", self.dst_bit))
             .show_ui(ui, |ui| {
