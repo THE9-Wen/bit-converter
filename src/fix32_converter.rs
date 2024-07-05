@@ -20,7 +20,7 @@ impl ValueConverter for Fix32ToFloatConverter {
 }
 
 pub struct Fix32ToFloat32Converter {
-    pub(crate) bit: i32
+    pub(crate) bit: u32
 }
 
 impl ValueConverter for Fix32ToFloat32Converter {
@@ -30,7 +30,7 @@ impl ValueConverter for Fix32ToFloat32Converter {
 }
 
 pub struct  Fix32ToFloat16Converter {
-    pub(crate) bit: i32
+    pub(crate) bit: u32
 }
 
 impl ValueConverter for Fix32ToFloat16Converter {
@@ -40,7 +40,7 @@ impl ValueConverter for Fix32ToFloat16Converter {
 }
 
 pub struct  Fix32ToComplex16Converter {
-    pub(crate) bit: i32
+    pub(crate) bit: u32
 }
 
 impl ValueConverter for Fix32ToComplex16Converter {
@@ -50,7 +50,7 @@ impl ValueConverter for Fix32ToComplex16Converter {
 }
 
 pub struct  Fix32ToComplexConverter {
-    pub(crate) bit: i32
+    pub(crate) bit: u32
 }
 
 impl ValueConverter for Fix32ToComplexConverter {

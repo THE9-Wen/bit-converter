@@ -72,15 +72,8 @@ impl BitConverter {
         }
     }
 
-    fn switch_converter(&mut self) -> bool {
-        let converter = ConverterFactory::create(&self.src, &self.dst, self.src_bit, self.dst_bit);
-        if converter.is_self_converter() {
-            true
-        } else {
-            self.converter = converter;
-            println!("Convert form {} to {}.", self.src, self.dst);
-            false
-        }
+    fn switch_converter(&mut self) {
+        self.converter = ConverterFactory::create(&self.src, &self.dst, self.src_bit, self.dst_bit);
     }
 
     fn grid_contents(&mut self, ui: &mut Ui) {
@@ -120,9 +113,11 @@ impl BitConverter {
                 .selected_text(format!("{}", self.dst))
                 .show_ui(ui, |ui| {
                     for kind in [Float, Float32, Float16, Fix32, Fix16, Complex, Complex16] {
-                        switch_converter |= ui
-                            .selectable_value(&mut self.dst, kind, format!("{}", kind))
-                            .changed();
+                        if ConverterFactory::check(&self.src, &kind) {
+                            switch_converter |= ui
+                                .selectable_value(&mut self.dst, kind, format!("{}", kind))
+                                .changed();
+                        }
                     }
                 });
             match self.dst {
@@ -133,7 +128,9 @@ impl BitConverter {
         });
         ui.end_row();
 
-        if switch_converter && self.switch_converter() {
+        if switch_converter && ConverterFactory::check(&self.src, &self.dst) {
+            self.switch_converter();
+        } else {
             self.src = src;
             self.dst = dst;
         }
@@ -181,7 +178,12 @@ impl BitConverter {
         ui.end_row();
 
         if ui.button("Convert").clicked() {
-            self.dst_value = self.converter.convert(self.src_value.as_ref());
+            if self.src_value.starts_with("0x") || self.src_value.starts_with("0X") {
+                self.dst_value = self.converter.convert(&self.src_value[2..]);
+            } else {
+                self.dst_value = self.converter.convert(&self.src_value[0..]);
+            }
+
         }
         ui.end_row();
     }
@@ -224,48 +226,6 @@ impl eframe::App for BitConverter {
         });
     }
 }
-
-// fn main() -> Result<(), Error> {
-//     println!("***********Value Converter**********
-// Supported value type:
-// 1. float32
-// 2. float16
-// 3. float
-// 4. fix32
-// 5. fix16
-// 6. complex16
-// 7. complex
-// Current converter: float32 to float
-// Input a number or file path to convert
-// Input two value types divided by a blank space to switch converter
-// Input \"quit\" to quit
-// ************************************");
-//     let mut input = String::new();
-//     let mut trimmed_input;
-//     let buffer = stdin();
-//     let mut converter = ConverterFactory::create(Float, Float32);
-//     let bit_stream = Regex::new(r"^(0x)[0-9A-Fa-f]{1,8}$").unwrap();
-//     let number = Regex::new(r"^[+-]?(\d+(\.\d*)?|\.\d+)$").unwrap();
-//     loop {
-//         input.clear();
-//         buffer.read_line(&mut input).unwrap();
-//         trimmed_input = input.trim();
-//         let split: Vec<&str> = trimmed_input.split(" ").collect();
-//         if split.len() == 2 {
-//             converter = ConverterFactory::create(
-//                 ValueType::get_value_type(split[0]),
-//                 ValueType::get_value_type(split[1]));
-//         } else if trimmed_input == "quit" {
-//             return Ok(());
-//         } else if bit_stream.is_match(trimmed_input) {
-//             println!("{}", converter.convert(&trimmed_input[2..]));
-//         } else if number.is_match(trimmed_input) {
-//             println!("{}", converter.convert(trimmed_input));
-//         } else {
-//             process_file(&trimmed_input, &*converter);
-//         }
-//     }
-// }
 
 fn process_file(path: &str, converter: &dyn ValueConverter) {
     let path = Path::new(path);

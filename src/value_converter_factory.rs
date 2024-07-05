@@ -1,9 +1,10 @@
 use std::fmt::{Display, Formatter};
-use std::io::stdin;
-use std::str::FromStr;
 
 use crate::common_converter::{SelfConverter, ValueConverter};
+use crate::complex16_converter::Complex16ToComplexConverter;
+use crate::complex_converter::{ComplexToComplex16Converter, ComplexToFloat32Converter};
 use crate::fix16_converter::{Fix16ToFloat16Converter, Fix16ToFloatConverter};
+use crate::fix32_converter::{Fix32ToFloat32Converter, Fix32ToFloatConverter};
 use crate::float16_converter::{
     Float16ToFix16Converter, Float16ToFix32Converter, Float16ToFloat32Converter,
     Float16ToFloatConverter,
@@ -21,6 +22,8 @@ use crate::value_converter_factory::ValueType::{
 
 pub trait ValueConverterFactory {
     fn create(dst: &ValueType, src_bit: u32, dst_bit: u32) -> Box<dyn ValueConverter>;
+
+    fn check(dst: &ValueType) -> bool;
 }
 
 pub struct FloatConverterFactory;
@@ -39,6 +42,10 @@ impl ValueConverterFactory for FloatConverterFactory {
             }),
         }
     }
+
+    fn check(dst: &ValueType) -> bool {
+        [Float32, Float16, Complex16, Complex, Fix32, Fix16].contains(dst)
+    }
 }
 
 pub struct Float32ConverterFactory;
@@ -56,6 +63,10 @@ impl ValueConverterFactory for Float32ConverterFactory {
             }),
         }
     }
+
+    fn check(dst: &ValueType) -> bool {
+        [Float16, Float, Complex, Fix32, Fix16].contains(dst)
+    }
 }
 
 pub struct Float16ConverterFactory;
@@ -72,6 +83,10 @@ impl ValueConverterFactory for Float16ConverterFactory {
             }),
         }
     }
+
+    fn check(dst: &ValueType) -> bool {
+        [Float32, Float, Fix32, Fix16].contains(dst)
+    }
 }
 
 pub struct Fix32ConverterFactory;
@@ -79,16 +94,16 @@ pub struct Fix32ConverterFactory;
 impl ValueConverterFactory for Fix32ConverterFactory {
     fn create(dst: &ValueType, src_bit: u32, dst_bit: u32) -> Box<dyn ValueConverter> {
         match dst {
-            // Float32 => {}
-            // Float16 => {}
-            // Float => Box::new()
-            // Complex16 => {}
-            // Complex => {}
-            // Fix16 => {}
+            Float32 => Box::new(Fix32ToFloat32Converter { bit: src_bit }),
+            Float => Box::new(Fix32ToFloatConverter { bit: src_bit }),
             _ => Box::new(SelfConverter {
                 value_type: Fix32 as i32,
             }),
         }
+    }
+
+    fn check(dst: &ValueType) -> bool {
+        [Float32, Float].contains(dst)
     }
 }
 
@@ -104,13 +119,25 @@ impl ValueConverterFactory for Fix16ConverterFactory {
             }),
         }
     }
+
+    fn check(dst: &ValueType) -> bool {
+        [Float16, Float].contains(dst)
+    }
 }
 
 pub struct Complex16ConverterFactory;
 
 impl ValueConverterFactory for Complex16ConverterFactory {
     fn create(dst: &ValueType, src_bit: u32, dst_bit: u32) -> Box<dyn ValueConverter> {
-        todo!()
+        match dst {
+            Complex => Box::new(Complex16ToComplexConverter),
+            Float32 => Box::new(ComplexToFloat32Converter),
+            _ => Box::new(SelfConverter { value_type: Complex16 as i32 })
+        }
+    }
+
+    fn check(dst: &ValueType) -> bool {
+        [Complex].contains(dst)
     }
 }
 
@@ -118,7 +145,15 @@ pub struct ComplexConverterFactory;
 
 impl ValueConverterFactory for ComplexConverterFactory {
     fn create(dst: &ValueType, src_bit: u32, dst_bit: u32) -> Box<dyn ValueConverter> {
-        todo!()
+        match dst {
+            Complex16 => Box::new(ComplexToComplex16Converter),
+            Float32 => Box::new(ComplexToFloat32Converter),
+            _ => Box::new(SelfConverter { value_type: Complex as i32 })
+        }
+    }
+
+    fn check(dst: &ValueType) -> bool {
+        [Complex16].contains(dst)
     }
 }
 
@@ -140,6 +175,19 @@ impl ConverterFactory {
             Fix32 => Fix32ConverterFactory::create(dst, src_bit, dst_bit),
             Fix16 => Fix16ConverterFactory::create(dst, src_bit, dst_bit),
             ValueTypeNum => Box::new(SelfConverter { value_type: 0 }),
+        }
+    }
+
+    pub fn check(src: &ValueType, dst: &ValueType) -> bool {
+        match src {
+            Float32 => Float32ConverterFactory::check(dst),
+            Float16 => Float16ConverterFactory::check(dst),
+            Float => FloatConverterFactory::check(dst),
+            Complex16 => Complex16ConverterFactory::check(dst),
+            Complex => ComplexConverterFactory::check(dst),
+            Fix32 => Fix32ConverterFactory::check(dst),
+            Fix16 => Fix16ConverterFactory::check(dst),
+            ValueTypeNum => false,
         }
     }
 }
