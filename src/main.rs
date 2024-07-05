@@ -1,39 +1,40 @@
 use std::fs::File;
-use std::io::{BufRead, BufReader, Error, stdin, Write};
+use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
 use std::str::FromStr;
-use eframe::{egui, Frame};
-use eframe::egui::{Context};
 
-use regex::Regex;
+use eframe::{egui, Frame};
+use eframe::egui::{Context, Ui};
 
 use crate::common_converter::ValueConverter;
 use crate::float_converter::FloatToFloat32Converter;
 use crate::value_converter_factory::{ConverterFactory, ValueConverterFactory, ValueType};
-use crate::value_converter_factory::ValueType::{Complex, Complex16, Fix16, Fix32, Float, Float16, Float32};
+use crate::value_converter_factory::ValueType::{
+    Complex, Complex16, Fix16, Fix32, Float, Float16, Float32,
+};
 
-mod value_converter_factory;
-mod float_converter;
-mod float32_converter;
-mod float16_converter;
-mod fix32_converter;
-mod fix16_converter;
-mod complex_converter;
-mod complex16_converter;
-mod fix_complex16_converter;
 mod common_converter;
+mod complex16_converter;
+mod complex_converter;
+mod fix16_converter;
+mod fix32_converter;
+mod fix_complex16_converter;
+mod float16_converter;
+mod float32_converter;
+mod float_converter;
+mod value_converter_factory;
 
 fn main() -> Result<(), eframe::Error> {
     // 创建视口选项，设置视口的内部大小为320x240像素
-    let options = eframe::NativeOptions{
-        viewport: egui::ViewportBuilder::default().with_inner_size([320.0, 240.0]),
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default().with_inner_size([500.0, 500.0]),
         ..Default::default()
     };
 
     // 运行egui应用程序
     eframe::run_native(
         "Bit Converter", // 应用程序的标题
-        options, // 视口选项
+        options,         // 视口选项
         Box::new(|cc| {
             // 为我们提供图像支持
             egui_extras::install_image_loaders(&cc.egui_ctx);
@@ -76,73 +77,88 @@ impl BitConverter {
             false
         }
     }
+
+    fn grid_contents(&mut self, ui: &mut Ui) {
+        let mut switch_converter = false;
+        let src = Float;
+        let dst = Float32;
+
+        let label = ui.label("Input Data Type:");
+        egui::ComboBox::new("input_data_type", "")
+            .selected_text(format!("{}", self.src))
+            .show_ui(ui, |ui| {
+                for kind in [Float, Float32, Float16, Fix32, Fix16, Complex, Complex16] {
+                    switch_converter |= ui
+                        .selectable_value(&mut self.src, kind, format!("{}", kind))
+                        .changed();
+                }
+            });
+        ui.end_row();
+
+        let label = ui.label("Output Data Type:");
+        egui::ComboBox::new("output_data_type", "")
+            .selected_text(format!("{}", self.dst))
+            .show_ui(ui, |ui| {
+                for kind in [Float, Float32, Float16, Fix32, Fix16, Complex, Complex16] {
+                    switch_converter |= ui
+                        .selectable_value(&mut self.dst, kind, format!("{}", kind))
+                        .changed();
+                }
+            });
+        ui.end_row();
+
+        if switch_converter && self.switch_converter() {
+            self.src = src;
+            self.dst = dst;
+        }
+
+        ui.label("Convert File:");
+        ui.end_row();
+
+        let label = ui.label("Input File Path:");
+        ui.text_edit_singleline(&mut self.src_file);
+        if ui.button("Browse").clicked() {
+            println!("Hello");
+        }
+        ui.end_row();
+
+        let label = ui.label("Output File Path:");
+        ui.text_edit_singleline(&mut self.dst_file);
+        ui.end_row();
+
+        if ui.button("Convert").clicked() {
+            process_file(self.src_file.as_ref(), self.converter.as_ref());
+        }
+        ui.end_row();
+
+        ui.label("Convert Value:");
+        ui.end_row();
+
+        let label = ui.label("Input Value:");
+        ui.text_edit_singleline(&mut self.src_value);
+        ui.end_row();
+
+        let label = ui.label("Output Value:");
+        ui.text_edit_singleline(&mut self.dst_value);
+        ui.end_row();
+
+        if ui.button("Convert").clicked() {
+            self.dst_value = self.converter.convert(self.src_value.as_ref());
+        }
+        ui.end_row();
+    }
 }
 
 impl eframe::App for BitConverter {
     fn update(&mut self, ctx: &Context, frame: &mut Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            let mut switch_converter = false;
-            let src = Float;
-            let dst = Float32;
-
-            ui.horizontal(|ui| {
-                let label = ui.label("Input Data Type:");
-                egui::ComboBox::new("input_data_type", "")
-                    .selected_text(format!("{}", self.src))
-                    .show_ui(ui, |ui| {
-                        for kind in [
-                            Float, Float32, Float16, Fix32, Fix16, Complex, Complex16
-                        ] {
-                            switch_converter |= ui.selectable_value(&mut self.src, kind, format!("{}", kind)).changed();
-                        }
-                    });
-            });
-
-            ui.horizontal(|ui| {
-                let label = ui.label("Output Data Type:");
-                egui::ComboBox::new("output_data_type", "")
-                    .selected_text(format!("{}", self.dst))
-                    .show_ui(ui, |ui| {
-                        for kind in [
-                            Float, Float32, Float16, Fix32, Fix16, Complex, Complex16
-                        ] {
-                            switch_converter |= ui.selectable_value(&mut self.dst, kind, format!("{}", kind)).changed();
-                        }
-                    });
-            });
-            if switch_converter && self.switch_converter() {
-                self.src = src;
-                self.dst = dst;
-            }
-
-            ui.label("Convert File:");
-            ui.horizontal(|ui| {
-                let label = ui.label("Input File Path:");
-                ui.text_edit_singleline(&mut self.src_file);
-                if ui.button("Browse").clicked() {
-                    println!("Hello");
-                }
-            });
-            ui.horizontal(|ui| {
-                let label = ui.label("Output File Path:");
-                ui.text_edit_singleline(&mut self.dst_file);
-            });
-            if ui.button("Convert").clicked() {
-                process_file(self.src_file.as_ref(), self.converter.as_ref());
-            }
-
-            ui.label("Convert Value:");
-            ui.horizontal(|ui| {
-                let label = ui.label("Input Value:");
-                ui.text_edit_singleline(&mut self.src_value);
-            });
-            ui.horizontal(|ui| {
-                let label = ui.label("Output Value:");
-                ui.text_edit_singleline(&mut self.dst_value);
-            });
-            if ui.button("Convert").clicked() {
-                self.dst_value = self.converter.convert(self.src_value.as_ref());
-            }
+            egui::Grid::new("grid")
+                .num_columns(2)
+                .spacing([20.0, 4.0])
+                .striped(true)
+                .show(ui, |ui| {
+                    self.grid_contents(ui);
+                });
         });
     }
 }
@@ -198,7 +214,15 @@ fn process_file(path: &str, converter: &dyn ValueConverter) {
             let file_name = path.file_name().unwrap().to_str().unwrap();
             let file_dir = path.parent().unwrap_or(".".as_ref());
             let file_extension = path.extension().unwrap_or("".as_ref()).to_str().unwrap();
-            let mut file_out = File::create(Path::join(file_dir, format!("{}_out.{}", &file_name[..(file_name.len() - file_extension.len() - 1)], file_extension))).unwrap();
+            let mut file_out = File::create(Path::join(
+                file_dir,
+                format!(
+                    "{}_out.{}",
+                    &file_name[..(file_name.len() - file_extension.len() - 1)],
+                    file_extension
+                ),
+            ))
+            .unwrap();
             for line in buffered.lines() {
                 match line {
                     Ok(line) => {
@@ -208,7 +232,9 @@ fn process_file(path: &str, converter: &dyn ValueConverter) {
                         } else {
                             value = converter.convert(&line);
                         }
-                        file_out.write_all(format!("{}\n", value).as_bytes()).unwrap();
+                        file_out
+                            .write_all(format!("{}\n", value).as_bytes())
+                            .unwrap();
                     }
                     Err(e) => println!("{}", e),
                 }
