@@ -5,6 +5,7 @@ use std::str::FromStr;
 
 use eframe::{egui, Frame};
 use eframe::egui::{Context, Ui};
+use rfd::FileDialog;
 
 use crate::common_converter::ValueConverter;
 use crate::float_converter::FloatToFloat32Converter;
@@ -136,7 +137,19 @@ impl BitConverter {
         ui.label("Input File Path:");
         ui.text_edit_singleline(&mut self.src_file);
         if ui.button("Browse").clicked() {
-            println!("Hello");
+            let file = FileDialog::new()
+                .add_filter("text", &["txt", "dat"])
+                .set_directory("~")
+                .pick_file();
+            match file {
+                None => {}
+                Some(file) => {
+                    self.src_file = file.clone().to_str().unwrap_or("").to_string();
+                    let mut file_name = file.clone().file_name().unwrap().to_os_string().into_string().unwrap_or(String::new());
+                    file_name.insert_str(file_name.rfind(".").unwrap_or(0),"_out");
+                    self.dst_file = file.clone().parent().unwrap().join(file_name).to_str().unwrap_or("").to_string();
+                }
+            }
         }
         ui.end_row();
 
