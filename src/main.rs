@@ -170,20 +170,23 @@ impl BitConverter {
         ui.end_row();
 
         ui.label("Input Value:");
-        ui.text_edit_singleline(&mut self.src_value);
+        ui.text_edit_multiline(&mut self.src_value);
         ui.end_row();
 
         ui.label("Output Value:");
-        ui.text_edit_singleline(&mut self.dst_value);
+        ui.text_edit_multiline(&mut self.dst_value);
         ui.end_row();
 
         if ui.button("Convert").clicked() {
-            if self.src_value.starts_with("0x") || self.src_value.starts_with("0X") {
-                self.dst_value = self.converter.convert(&self.src_value[2..]);
-            } else {
-                self.dst_value = self.converter.convert(&self.src_value[0..]);
+            let src_values = self.src_value.split("\n");
+            self.dst_value = String::new();
+            for src_value in src_values {
+                if src_value.starts_with("0x") || src_value.starts_with("0X") {
+                    self.dst_value.push_str(&format!("{}\n", self.converter.convert(&src_value[2..])));
+                } else {
+                    self.dst_value.push_str(&format!("{}\n", self.converter.convert(&src_value)));
+                }
             }
-
         }
         ui.end_row();
     }
